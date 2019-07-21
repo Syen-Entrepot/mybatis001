@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cn.mapper.AddressesMapper">
+<!--开启二级缓存-->
+
+
+
+    <!--
+    将最长用的列，抽取成为一个SQL片段，目的是被别人引用
+    -->
+    <sql id="baseColumn">
+      country,state,city
+    </sql>
+
+   <select id="listAll" resultType="com.cn.pojo.Addresses">
+       select 
+       <include refid="baseColumn"/>
+        from addresses
+
+   </select>
+
+    <!--
+     功能：根据传入的对象动态的修改其中的值
+     如果某个字段传入的非空值，再去修改，否则不修改
+     where后面条件使用ID作为条件
+     <set>标签去后缀的逗号
+    -->
+    <update id="updata" parameterType="com.cn.pojo.Addresses">
+       update addresses
+       <set>
+
+           <if test="country !=null and country!=''">
+               country=#{country},
+           </if>
+           <if test="city !=null and city!=''">
+               city=#{city},
+           </if>
+           <if test="Street !=null and Street!=''">
+               Street=#{Street},
+           </if>
+           <if test="state !=null and state!=''">
+               state=#{state},
+           </if>
+
+           <if test="zip !=null and zip!=''">
+               zip=#{zip}
+           </if>
+       </set>
+
+
+
+       <where>
+           Id=#{Id}
+       </where>
+
+    </update>
+
+<select id="queryById" resultType="com.cn.pojo.Addresses">
+    select * from addresses where id=#{id}
+</select>
+<!--mybatis推出<where></where>标签，解决多余的的and,只能处理前置and,不能处理后置的
+if希望处理这个字符串不为null和不为""
+1.如何与空字符串比较
+2.如何连续多个条件
+
+-->
+    <select id="queryByCountryCity" resultType="com.cn.pojo.Addresses">
+       select * from addresses
+       <where>
+        <if test="city!=null and city!=''">
+           and city=#{city}
+       </if>
+
+        <if test="country!=null">
+          and country=#{country}
+        </if>
+       </where>
+    </select>
+    <!--parameterType是入参的类型，对于mybatis而言，绝大部分情况都能够进行自我推断
+    <choose>标签只选择第一个符合条件的
+    -->
+    <select id="query" resultType="com.cn.pojo.Addresses">
+     select * from  addresses
+     <where>
+         <choose>
+             <when test="country!=null and country!=''">
+                 and  country = #{country}
+             </when>
+             <when test="state!=null and state!=''">
+                 and state = #{state}
+             </when>
+             <otherwise>
+                 and  city = #{city}
+             </otherwise>
+         </choose>
+     </where>
+    </select>
+
+    <select id="queryTrim" resultType="com.cn.pojo.Addresses">
+     select * from addresses
+     <trim prefix="WHERE" suffixOverrides="AND">
+         <if test="country !=null and country!=''">
+             country=#{country} and
+         </if>
+         <if test="city !=null and city!=''">
+             city=#{city} and
+         </if>
+         <if test="Street !=null and Street!=''">
+             Street=#{Street} and
+         </if>
+         <if test="state !=null and state!=''">
+             state=#{state} and
+         </if>
+
+         <if test="zip !=null and zip!=''">
+             zip=#{zip} and
+         </if>
+     </trim>
+    </select>
+<!--
+foreach
+collection描述集合list,set,map
+open是后面的SQL语句的拼接以什么开头
+close是数据项以什么结尾
+item是数据项的一个代号
+separator item之间的分隔符
+index 如果需要使用标号，也可以使用
+-->
+    <select id="queryFor" resultType="com.cn.pojo.Addresses">
+        select * from addresses
+        <where>
+            Id in
+            <foreach item="item" index="index" collection="list"
+                     open="(" separator="," close=")">
+              #{item}+#{index}
+            </foreach>
+        </where>
+    </select>
+<!--#{}不支持拼接%-->
+    <select id="querylik" resultType="com.cn.pojo.Addresses">
+       <bind name="_city" value="'%'+city+'%'"/><!--方案三-->
+        select * from addresses
+        where
+        <!-- /* city like #{city}  方案一*/
+        /* city like concat('%',#{city},'%') 方案二-->
+
+        city like #{_city}<!--方案三-->
+    </select>
+</mapper>
